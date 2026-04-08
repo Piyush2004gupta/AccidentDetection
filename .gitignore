@@ -37,6 +37,7 @@ backend/data/
 *.mkv
 
 # Jupyter
+*.ipynb
 .ipynb_checkpoints/
 
 # Node / Frontend
