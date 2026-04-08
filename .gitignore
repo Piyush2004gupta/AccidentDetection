@@ -19,9 +19,8 @@ ENV/
 # Environment variables
 .env
 
-# Model weights (large binary files)
-*.pt
-*.pth
+# Model weights tracked via Git LFS (see .gitattributes)
+# *.pt and *.pth are tracked by LFS, not ignored
 *.onnx
 *.weights
 
