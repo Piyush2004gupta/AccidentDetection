@@ -1,0 +1,266 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>AI Accident Detection & Emergency Response</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main class="container">
+    <!-- Header / Settings Panel -->
+    <header class="header-card">
+      <div class="header-content">
+        <div class="header-title">
+          <h1>🚨 Accident Detection</h1>
+          <p class="header-subtitle">Real-time AI emergency response system</p>
+        </div>
+        <button id="settingsToggle" class="settings-btn" aria-label="Settings">⚙️</button>
+      </div>
+
+      <!-- Settings Panel (Hidden by default on mobile) -->
+      <div id="settingsPanel" class="settings-panel">
+        <div class="settings-group">
+          <label for="apiBase">API Base URL</label>
+          <input id="apiBase" type="text" value="/api" placeholder="e.g. /api or http://server:8000/api" />
+        </div>
+
+        <div class="settings-group">
+          <label for="detectCameraId">Camera ID</label>
+          <input id="detectCameraId" type="text" value="cam_001" />
+        </div>
+
+        <div class="settings-group">
+          <label for="detectSource">Stream Source</label>
+          <input id="detectSource" type="text" value="0" placeholder="0 for webcam or rtsp://..." />
+        </div>
+
+        <div class="settings-group">
+          <label for="detectMaxFrames">Max Frames (0 = unlimited)</label>
+          <input id="detectMaxFrames" type="number" min="0" value="0" />
+        </div>
+
+        <div class="settings-group">
+          <label for="adminWhatsApp">Admin WhatsApp Number</label>
+          <input id="adminWhatsApp" type="text" value="7428503197" placeholder="e.g. 917428503197" />
+        </div>
+
+        <div class="settings-group">
+          <label for="hospitalWhatsApp">Hospital WhatsApp Number(s)</label>
+          <input id="hospitalWhatsApp" type="text" value="7428503197" placeholder="e.g. 917428503197, 919999999999" />
+        </div>
+
+        <div class="settings-group">
+          <label for="ambulanceWhatsApp">Ambulance WhatsApp Number(s)</label>
+          <input id="ambulanceWhatsApp" type="text" value="6001340305" placeholder="e.g. 916001340305, 918888888888" />
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Detection Section -->
+    <section class="detection-section">
+      <div class="camera-card card">
+        <h2 class="section-title">📹 Live Camera Feed</h2>
+        <div class="video-wrap">
+          <video id="cameraPreview" autoplay playsinline muted></video>
+          <canvas id="detectionOverlay"></canvas>
+          <div class="video-status" id="videoStatus"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Results Section -->
+    <section id="resultsSection" class="results-section" style="display: none;">
+      <div class="results-container">
+        <!-- Left: Dispatch Result (Mobile: Top) -->
+        <div class="result-card card dispatch-card">
+          <h2 class="section-title">🚨 Dispatch Status</h2>
+          <div class="dispatch-header success">
+            ✅ Accident Detected & Alerts Sent
+          </div>
+
+          <div class="alert-stats">
+            <div class="stat-item">
+              <span class="stat-value" id="statAmbulances">2</span>
+              <span class="stat-label">Ambulances</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-value" id="statHospitals">2</span>
+              <span class="stat-label">Hospitals</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-value" id="statAdmins">1</span>
+              <span class="stat-label">Admins</span>
+            </div>
+          </div>
+
+          <div id="dispatchMessage" class="dispatch-message">
+            Accident detected from camera preview frames and alerts dispatched.
+          </div>
+
+          <div class="code-output">
+            <div class="code-label">Raw Response</div>
+            <pre id="output"></pre>
+          </div>
+
+          <div id="whatsAppActions" class="whatsapp-actions" style="display: none;">
+            <div class="whatsapp-role-buttons">
+              <button id="sendAllPanelsBtn" class="btn btn-primary" type="button">🚀 Send All Panels</button>
+              <button id="sendAdminPanelBtn" class="btn btn-primary" type="button">🛡 Admin Panel</button>
+              <button id="sendHospitalPanelBtn" class="btn btn-primary" type="button">🏥 Hospital Panel</button>
+              <button id="sendAmbulancePanelBtn" class="btn btn-primary" type="button">🚑 Ambulance Panel</button>
+            </div>
+            <div class="whatsapp-role-panels">
+              <div class="whatsapp-role-panel">
+                <div class="code-label">Admin Links</div>
+                <div id="adminPanelLinks" class="whatsapp-links"></div>
+              </div>
+              <div class="whatsapp-role-panel">
+                <div class="code-label">Hospital Links</div>
+                <div id="hospitalPanelLinks" class="whatsapp-links"></div>
+              </div>
+              <div class="whatsapp-role-panel">
+                <div class="code-label">Ambulance Links</div>
+                <div id="ambulancePanelLinks" class="whatsapp-links"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: Incident Details (Mobile: Bottom) -->
+        <div class="result-card card incident-card">
+          <h2 class="section-title">🛰️ Incident Details</h2>
+
+          <div class="detail-grid">
+            <div class="detail-item">
+              <span class="detail-label">Camera</span>
+              <span class="detail-value" id="detailCamera">cam_001</span>
+            </div>
+
+            <div class="detail-item">
+              <span class="detail-label">Severity</span>
+              <span class="detail-value severity-high" id="detailSeverity">HIGH</span>
+            </div>
+
+            <div class="detail-item">
+              <span class="detail-label">Confidence</span>
+              <span class="detail-value" id="detailConfidence">99%</span>
+            </div>
+
+            <div class="detail-item">
+              <span class="detail-label">Time (UTC)</span>
+              <span class="detail-value" id="detailTime">2026-03-22 06:51:59</span>
+            </div>
+          </div>
+
+          <div class="detail-section">
+            <span class="detail-label">📸 Evidence Image</span>
+            <a id="detailImageLink" href="#" target="_blank" class="image-link">
+              View on Cloudinary
+            </a>
+            <div id="detailImagePreview" class="image-preview"></div>
+          </div>
+
+          <div class="detail-section">
+            <span class="detail-label">📍 Location</span>
+            <a id="detailMapsLink" href="#" target="_blank" class="map-link">
+              🗺️ Open in Google Maps
+            </a>
+          </div>
+
+          <div id="incidentMeta" class="meta-box"></div>
+        </div>
+      </div>
+
+      <button id="backToDetectionBtn" class="btn btn-primary btn-large" style="margin-top: 16px;">
+        ← Back to Detection
+      </button>
+    </section>
+
+    <!-- Manual Alert Section (Hidden on mobile by default) -->
+    <section id="manualAlertSection" class="manual-alert-section card" style="display: none;">
+      <h2 class="section-title">📲 Manual Emergency Trigger</h2>
+      
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="alertCameraId">Camera ID</label>
+          <input id="alertCameraId" type="text" value="cam_001" />
+        </div>
+
+        <div class="form-group">
+          <label for="alertLat">Latitude</label>
+          <input id="alertLat" type="number" step="0.000001" placeholder="28.9845" />
+        </div>
+
+        <div class="form-group">
+          <label for="alertLon">Longitude</label>
+          <input id="alertLon" type="number" step="0.000001" placeholder="77.7064" />
+        </div>
+
+        <div class="form-group">
+          <label for="alertImageUrl">Image URL (Cloudinary)</label>
+          <input id="alertImageUrl" type="text" placeholder="https://res.cloudinary.com/.../..." />
+        </div>
+
+        <div class="form-group">
+          <label for="alertImagePath">Or Local Image Path</label>
+          <input id="alertImagePath" type="text" placeholder="captures/test.jpg" />
+        </div>
+
+        <div class="form-group">
+          <label for="alertSeverity">Severity</label>
+          <select id="alertSeverity">
+            <option value="low">🟢 Low</option>
+            <option value="medium" selected>🟡 Medium</option>
+            <option value="high">🔴 High</option>
+          </select>
+        </div>
+      </div>
+
+      <button id="alertBtn" class="btn btn-danger btn-large">
+        🚨 Send Emergency Alert (Voice + WhatsApp)
+      </button>
+      
+      <div class="alert-buttons-row">
+        <button id="alertWhatsAppOnlyBtn" class="btn btn-primary btn-large" style="flex: 1;">
+          💬 WhatsApp Only
+        </button>
+      </div>
+    </section>
+
+    <!-- Control Section -->
+    <section class="control-section">
+      <div class="control-card card">
+        <div class="button-group">
+          <button id="openCameraBtn" class="btn btn-primary btn-large">
+            📹 Start Detection
+          </button>
+          <button id="stopCameraBtn" class="btn btn-secondary btn-large">
+            ⏹️ Stop
+          </button>
+        </div>
+
+        <div class="info-box">
+          <p><strong>💡 Tip:</strong> Camera feed must stay visible during detection. Frames are sent to AI model for analysis every ~200ms.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Info Section -->
+    <section class="info-section card">
+      <h2 class="section-title">ℹ️ How It Works</h2>
+      <ol class="flow-list">
+        <li>Read camera frame stream (webcam, RTSP, HTTP video)</li>
+        <li>Run TimeSformer AI model inference on 16-frame clips</li>
+        <li>Capture evidence snapshot when accident detected</li>
+        <li>Upload image to Cloudinary CDN</li>
+        <li>Resolve camera GPS coordinates</li>
+        <li>Find nearest ambulances & hospitals by distance</li>
+        <li>Send WhatsApp alerts with photo, location & timestamp</li>
+      </ol>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
